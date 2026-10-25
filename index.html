@@ -274,79 +274,28 @@
         const parentError = document.getElementById('parentError');
 
         // تحويل الاستجابة إلى JSON مع إظهار خطأ واضح عند فشل التحويل
-        async function fetchJSON(url) {
-            const response = await fetch(url, {
-                method: 'GET',
-                redirect: 'follow',
-                cache: 'no-store'
-            });
+       async function fetchJSON(url) {
+    const response = await fetch(url, {
+        method: 'GET',
+        redirect: 'follow',
+        cache: 'no-store'
+    });
 
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
+    const responseText = await response.text();
 
-            return await response.json();
-        }
+    console.log('Google Apps Script status:', response.status);
+    console.log('Google Apps Script response:', responseText);
 
-        // تسجيل ولي الأمر وحجز رقم الدور
-        form.addEventListener('submit', async function (e) {
-            e.preventDefault();
+    if (!response.ok) {
+        throw new Error('HTTP ' + response.status + ': ' + responseText);
+    }
 
-            if (submitBtn.disabled) return;
-
-            submitBtn.disabled = true;
-            loadingText.style.display = 'block';
-            parentError.textContent = '';
-
-            const className =
-                document.getElementById('classSelect').value.trim();
-            const childName =
-                document.getElementById('childName').value.trim();
-            const parentName =
-                document.getElementById('parentName').value.trim();
-            const mobileNumber =
-                document.getElementById('mobileNumber').value.trim();
-
-            const params = new URLSearchParams({
-                action: 'getQueue',
-                className,
-                childName,
-                parentName,
-                mobileNumber
-            });
-
-            try {
-                const data = await fetchJSON(
-                    SCRIPT_URL + '?' + params.toString()
-                );
-
-                if (data.result !== 'success') {
-                    throw new Error('لم يؤكد السكربت نجاح التسجيل.');
-                }
-
-                document.getElementById('queueNum').textContent =
-                    '#' + data.queueNumber;
-
-                document.getElementById('ticketInfo').textContent =
-                    'الفصل: ' + className + ' | الطفل: ' + childName;
-
-                document.getElementById('ticketResult').style.display =
-                    'block';
-
-                // لا نمسح النموذج إلا بعد تأكيد نجاح التسجيل
-                form.reset();
-
-            } catch (err) {
-                console.error('خطأ التسجيل:', err);
-
-                parentError.textContent =
-                    'تعذّر تأكيد التسجيل. تحققي من الاتصال قبل إعادة المحاولة، حتى لا يتكرر التسجيل.';
-            } finally {
-                submitBtn.disabled = false;
-                loadingText.style.display = 'none';
-            }
-        });
-
+    try {
+        return JSON.parse(responseText);
+    } catch (err) {
+        throw new Error('الرد ليس JSON صالحًا: ' + responseText.slice(0, 300));
+    }
+}
         // الانتقال بين واجهتي ولي الأمر والمعلمة
         function toggleView(view) {
             if (view === 'teacher') {
