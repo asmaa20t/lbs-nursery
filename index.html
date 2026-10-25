@@ -219,7 +219,7 @@
     </div>
 
     <script>
-        // رابط جوجل سكربت الخاص بكِ مدمج هنا مباشرة
+        // الرابط الصحيح والمحدث مدمج هنا
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx5kYGe_0708xxWCSAsh1oUG0aZbewfl4RF1tV8dXmQul5IuN8TMf3WfSYboALYlVwt/exec";
 
         const form = document.getElementById('queueForm');
@@ -252,6 +252,8 @@
                     document.getElementById('ticketInfo').innerText = `الفصل: ${payload.className} | الطفل: ${payload.childName}`;
                     document.getElementById('ticketResult').style.display = 'block';
                     form.reset();
+                } else {
+                    alert("حدث خطأ في الخادم.");
                 }
             })
             .catch(err => {
