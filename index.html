@@ -77,6 +77,10 @@
         .btn:hover {
             background-color: #143528;
         }
+        .btn:disabled {
+            opacity: 0.65;
+            cursor: wait;
+        }
         .link-btn {
             background: none;
             border: none;
@@ -110,18 +114,27 @@
             padding: 10px;
             border-bottom: 1px solid #ddd;
             font-size: 14px;
+            overflow-wrap: anywhere;
         }
         th {
             background-color: #f0f0f0;
             color: #333;
         }
         .hidden {
-            display: none;
+            display: none !important;
         }
         .loading {
             display: none;
             color: #666;
             margin-top: 10px;
+        }
+        .status-message {
+            margin-top: 12px;
+            font-size: 14px;
+            overflow-wrap: anywhere;
+        }
+        .error-message {
+            color: #b42318;
         }
     </style>
 </head>
@@ -130,11 +143,14 @@
     <!-- واجهة ولي الأمر -->
     <div id="parentView" class="card">
         <h1>LBS Nursery</h1>
-        <div class="subtitle">لقاء أولياء الأمور<br><small>Parent–Teacher Conference</small></div>
+        <div class="subtitle">
+            لقاء أولياء الأمور<br>
+            <small>Parent–Teacher Conference</small>
+        </div>
 
         <form id="queueForm">
             <div class="form-group">
-                <label>Class / الفصل</label>
+                <label for="classSelect">Class / الفصل</label>
                 <select id="classSelect" required>
                     <option value="Moon">Moon (المعلمة: ward)</option>
                     <option value="Bees">Bees (المعلمة: Maram)</option>
@@ -147,31 +163,44 @@
             </div>
 
             <div class="form-group">
-                <label>Child Name / اسم الطفل</label>
-                <input type="text" id="childName" required placeholder="أدخل اسم الطفل">
+                <label for="childName">Child Name / اسم الطفل</label>
+                <input type="text" id="childName" required maxlength="100"
+                       placeholder="أدخل اسم الطفل">
             </div>
 
             <div class="form-group">
-                <label>Parent Name / اسم ولي الأمر</label>
-                <input type="text" id="parentName" required placeholder="أدخل اسم ولي الأمر">
+                <label for="parentName">Parent Name / اسم ولي الأمر</label>
+                <input type="text" id="parentName" required maxlength="100"
+                       placeholder="أدخل اسم ولي الأمر">
             </div>
 
             <div class="form-group">
-                <label>Mobile Number / رقم الجوال</label>
-                <input type="tel" id="mobileNumber" required placeholder="05XXXXXXXX">
+                <label for="mobileNumber">Mobile Number / رقم الجوال</label>
+                <input type="tel" id="mobileNumber" required maxlength="20"
+                       placeholder="05XXXXXXXX">
             </div>
 
-            <button type="submit" id="submitBtn" class="btn">Get Queue Number / الحصول على رقم</button>
-            <div id="loadingText" class="loading">جاري إرسال الطلب وحجز الرقم...</div>
+            <button type="submit" id="submitBtn" class="btn">
+                Get Queue Number / الحصول على رقم
+            </button>
+
+            <div id="loadingText" class="loading" role="status">
+                جاري إرسال الطلب وحجز الرقم...
+            </div>
+            <div id="parentError" class="status-message error-message"
+                 role="alert"></div>
         </form>
 
-        <div id="ticketResult" class="ticket">
+        <div id="ticketResult" class="ticket" aria-live="polite">
             <h3>رقم الانتظار الخاص بك</h3>
             <div id="queueNum" class="ticket-number">#0</div>
             <p id="ticketInfo" style="margin: 0; color: #555;"></p>
         </div>
 
-        <button class="link-btn" onclick="toggleView('teacher')">Teacher / Admin (دخول المعلمات)</button>
+        <button class="link-btn" type="button"
+                onclick="toggleView('teacher')">
+            Teacher / Admin (دخول المعلمات)
+        </button>
     </div>
 
     <!-- واجهة المعلمة -->
@@ -180,12 +209,14 @@
         <div class="subtitle">عرض قائمة الانتظار للفصل</div>
 
         <div class="form-group">
-            <label>اسم المعلمة (Teacher Name):</label>
-            <input type="text" id="teacherNameInput" placeholder="أدخلي اسمك هنا" oninput="loadTeacherData()">
+            <label for="teacherNameInput">اسم المعلمة (Teacher Name):</label>
+            <input type="text" id="teacherNameInput"
+                   placeholder="أدخلي اسمك هنا"
+                   oninput="updateTeacherWelcome()">
         </div>
 
         <div class="form-group">
-            <label>اختر الفصل (Class):</label>
+            <label for="teacherClassSelect">اختر الفصل (Class):</label>
             <select id="teacherClassSelect" onchange="loadTeacherData()">
                 <option value="Moon">Moon - ward</option>
                 <option value="Bees">Bees - Maram</option>
@@ -197,9 +228,16 @@
             </select>
         </div>
 
-        <div id="teacherWelcome" style="margin-bottom: 10px; font-weight: bold; color: #1e4d3b;"></div>
+        <div id="teacherWelcome"
+             style="margin-bottom: 10px; font-weight: bold; color: #1e4d3b;"></div>
 
-        <button class="btn" style="background-color: #2196F3; margin-bottom: 15px;" onclick="loadTeacherData()">تحديث القائمة 🔄</button>
+        <button type="button" class="btn"
+                style="background-color: #2196F3; margin-bottom: 15px;"
+                id="refreshBtn" onclick="loadTeacherData()">
+            تحديث القائمة 🔄
+        </button>
+
+        <div id="teacherStatus" class="status-message" role="status"></div>
 
         <table>
             <thead>
@@ -211,100 +249,203 @@
                 </tr>
             </thead>
             <tbody id="studentList">
-                <!-- سيتم عرض البيانات هنا -->
+                <tr>
+                    <td colspan="4" style="text-align:center;">
+                        اختاري الفصل لعرض البيانات.
+                    </td>
+                </tr>
             </tbody>
         </table>
 
-        <button class="link-btn" onclick="toggleView('parent')">العودة لواجهة ولي الأمر</button>
+        <button class="link-btn" type="button"
+                onclick="toggleView('parent')">
+            العودة لواجهة ولي الأمر
+        </button>
     </div>
 
     <script>
-        // الرابط الخاص بك مدمج هنا وجاهز
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx5kYGe_0708xxWCSAsh1oUG0aZbewfl4RF1tV8dXmQul5IuN8TMf3WfSYboALYlVwt/exec";
+        // رابط النشر الأصلي في Google Apps Script
+        const SCRIPT_URL =
+            "https://script.google.com/macros/s/AKfycbx5kYGe_0708xxWCSAsh1oUG0aZbewfl4RF1tV8dXmQul5IuN8TMf3WfSYboALYlVwt/exec";
 
         const form = document.getElementById('queueForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const loadingText = document.getElementById('loadingText');
+        const parentError = document.getElementById('parentError');
 
-        form.addEventListener('submit', function(e) {
+        // تحويل الاستجابة إلى JSON مع إظهار خطأ واضح عند فشل التحويل
+        async function fetchJSON(url) {
+            const response = await fetch(url, {
+                method: 'GET',
+                redirect: 'follow',
+                cache: 'no-store'
+            });
+
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+
+            return await response.json();
+        }
+
+        // تسجيل ولي الأمر وحجز رقم الدور
+        form.addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            document.getElementById('submitBtn').disabled = true;
-            document.getElementById('loadingText').style.display = 'block';
+            if (submitBtn.disabled) return;
 
-            const className = document.getElementById('classSelect').value;
-            const childName = document.getElementById('childName').value;
-            const parentName = document.getElementById('parentName').value;
-            const mobileNumber = document.getElementById('mobileNumber').value;
+            submitBtn.disabled = true;
+            loadingText.style.display = 'block';
+            parentError.textContent = '';
 
-            const url = `${SCRIPT_URL}?action=getQueue&className=${encodeURIComponent(className)}&childName=${encodeURIComponent(childName)}&parentName=${encodeURIComponent(parentName)}&mobileNumber=${encodeURIComponent(mobileNumber)}`;
+            const className =
+                document.getElementById('classSelect').value.trim();
+            const childName =
+                document.getElementById('childName').value.trim();
+            const parentName =
+                document.getElementById('parentName').value.trim();
+            const mobileNumber =
+                document.getElementById('mobileNumber').value.trim();
 
-            fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('submitBtn').disabled = false;
-                document.getElementById('loadingText').style.display = 'none';
-
-                if (data.result === "success") {
-                    document.getElementById('queueNum').innerText = '#' + data.queueNumber;
-                    document.getElementById('ticketInfo').innerText = `الفصل: ${className} | الطفل: ${childName}`;
-                    document.getElementById('ticketResult').style.display = 'block';
-                    form.reset();
-                } else {
-                    alert("حدث خطأ أثناء الحفظ.");
-                }
-            })
-            .catch(err => {
-                alert("حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى.");
-                document.getElementById('submitBtn').disabled = false;
-                document.getElementById('loadingText').style.display = 'none';
+            const params = new URLSearchParams({
+                action: 'getQueue',
+                className,
+                childName,
+                parentName,
+                mobileNumber
             });
+
+            try {
+                const data = await fetchJSON(
+                    SCRIPT_URL + '?' + params.toString()
+                );
+
+                if (data.result !== 'success') {
+                    throw new Error('لم يؤكد السكربت نجاح التسجيل.');
+                }
+
+                document.getElementById('queueNum').textContent =
+                    '#' + data.queueNumber;
+
+                document.getElementById('ticketInfo').textContent =
+                    'الفصل: ' + className + ' | الطفل: ' + childName;
+
+                document.getElementById('ticketResult').style.display =
+                    'block';
+
+                // لا نمسح النموذج إلا بعد تأكيد نجاح التسجيل
+                form.reset();
+
+            } catch (err) {
+                console.error('خطأ التسجيل:', err);
+
+                parentError.textContent =
+                    'تعذّر تأكيد التسجيل. تحققي من الاتصال قبل إعادة المحاولة، حتى لا يتكرر التسجيل.';
+            } finally {
+                submitBtn.disabled = false;
+                loadingText.style.display = 'none';
+            }
         });
 
+        // الانتقال بين واجهتي ولي الأمر والمعلمة
         function toggleView(view) {
             if (view === 'teacher') {
-                document.getElementById('parentView').classList.add('hidden');
-                document.getElementById('teacherView').classList.remove('hidden');
+                document.getElementById('parentView')
+                    .classList.add('hidden');
+                document.getElementById('teacherView')
+                    .classList.remove('hidden');
+
+                updateTeacherWelcome();
                 loadTeacherData();
             } else {
-                document.getElementById('teacherView').classList.add('hidden');
-                document.getElementById('parentView').classList.remove('hidden');
+                document.getElementById('teacherView')
+                    .classList.add('hidden');
+                document.getElementById('parentView')
+                    .classList.remove('hidden');
             }
         }
 
-        function loadTeacherData() {
-            const className = document.getElementById('teacherClassSelect').value;
-            const teacherName = document.getElementById('teacherNameInput').value;
+        // تحديث الترحيب بالمعلمة
+        function updateTeacherWelcome() {
+            const className =
+                document.getElementById('teacherClassSelect').value;
+            const teacherName =
+                document.getElementById('teacherNameInput').value.trim();
+
+            document.getElementById('teacherWelcome').textContent =
+                teacherName
+                    ? 'أهلاً المعلمة: ' + teacherName + ' - الفصل: ' + className
+                    : 'الفصل المحدد: ' + className;
+        }
+
+        // جلب قائمة الانتظار للفصل المختار
+        async function loadTeacherData() {
+            const className =
+                document.getElementById('teacherClassSelect').value;
             const tbody = document.getElementById('studentList');
+            const status = document.getElementById('teacherStatus');
+            const refreshBtn = document.getElementById('refreshBtn');
 
-            if (teacherName.trim() !== "") {
-                document.getElementById('teacherWelcome').innerText = `أهلاً المعلمة: ${teacherName} - الفصل: ${className}`;
-            } else {
-                document.getElementById('teacherWelcome').innerText = `الفصل المحدد: ${className}`;
-            }
+            updateTeacherWelcome();
 
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">جاري تحميل البيانات من جوجل...</td></tr>';
+            tbody.innerHTML =
+                '<tr><td colspan="4" style="text-align:center;">جاري تحميل البيانات من جوجل...</td></tr>';
+            status.textContent = '';
+            refreshBtn.disabled = true;
 
-            fetch(`${SCRIPT_URL}?className=${encodeURIComponent(className)}`)
-            .then(res => res.json())
-            .then(data => {
+            const params = new URLSearchParams({ className });
+
+            try {
+                const data = await fetchJSON(
+                    SCRIPT_URL + '?' + params.toString()
+                );
+
+                if (!Array.isArray(data)) {
+                    throw new Error(
+                        'الاستجابة ليست قائمة بيانات. تحققي من كود Apps Script.'
+                    );
+                }
+
                 tbody.innerHTML = '';
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">لا يوجد مسجلين في هذا الفصل حتى الآن.</td></tr>';
+
+                if (data.length === 0) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="4" style="text-align:center;">لا يوجد مسجلون في هذا الفصل حتى الآن.</td></tr>';
                     return;
                 }
 
-                data.forEach(item => {
-                    const row = `<tr>
-                        <td><b>#${item.number}</b></td>
-                        <td>${item.childName}</td>
-                        <td>${item.parentName}</td>
-                        <td>${item.mobile}</td>
-                    </tr>`;
-                    tbody.innerHTML += row;
+                data.forEach(function (item) {
+                    const row = document.createElement('tr');
+
+                    const values = [
+                        '#' + (item.number ?? ''),
+                        item.childName ?? '',
+                        item.parentName ?? '',
+                        item.mobile ?? ''
+                    ];
+
+                    values.forEach(function (value) {
+                        const cell = document.createElement('td');
+                        cell.textContent = String(value);
+                        row.appendChild(cell);
+                    });
+
+                    tbody.appendChild(row);
                 });
-            })
-            .catch(err => {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">تعذر جلب البيانات.</td></tr>';
-            });
+
+            } catch (err) {
+                console.error('خطأ جلب بيانات المعلمة:', err);
+
+                tbody.innerHTML =
+                    '<tr><td colspan="4" style="text-align:center; color:red;">تعذّر جلب البيانات.</td></tr>';
+
+                status.textContent =
+                    'فشل الاتصال ببيانات Google Sheets. افتحي Console في المتصفح لمعرفة تفاصيل الخطأ.';
+                status.className = 'status-message error-message';
+
+            } finally {
+                refreshBtn.disabled = false;
+            }
         }
     </script>
 </body>
