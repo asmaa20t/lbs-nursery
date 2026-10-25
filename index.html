@@ -219,7 +219,7 @@
     </div>
 
     <script>
-        // الرابط الصحيح والمحدث مدمج هنا
+        // الرابط الخاص بك مدمج هنا وجاهز
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx5kYGe_0708xxWCSAsh1oUG0aZbewfl4RF1tV8dXmQul5IuN8TMf3WfSYboALYlVwt/exec";
 
         const form = document.getElementById('queueForm');
@@ -230,18 +230,14 @@
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('loadingText').style.display = 'block';
 
-            const payload = {
-                action: "getQueue",
-                className: document.getElementById('classSelect').value,
-                childName: document.getElementById('childName').value,
-                parentName: document.getElementById('parentName').value,
-                mobileNumber: document.getElementById('mobileNumber').value
-            };
+            const className = document.getElementById('classSelect').value;
+            const childName = document.getElementById('childName').value;
+            const parentName = document.getElementById('parentName').value;
+            const mobileNumber = document.getElementById('mobileNumber').value;
 
-            fetch(SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify(payload)
-            })
+            const url = `${SCRIPT_URL}?action=getQueue&className=${encodeURIComponent(className)}&childName=${encodeURIComponent(childName)}&parentName=${encodeURIComponent(parentName)}&mobileNumber=${encodeURIComponent(mobileNumber)}`;
+
+            fetch(url)
             .then(res => res.json())
             .then(data => {
                 document.getElementById('submitBtn').disabled = false;
@@ -249,11 +245,11 @@
 
                 if (data.result === "success") {
                     document.getElementById('queueNum').innerText = '#' + data.queueNumber;
-                    document.getElementById('ticketInfo').innerText = `الفصل: ${payload.className} | الطفل: ${payload.childName}`;
+                    document.getElementById('ticketInfo').innerText = `الفصل: ${className} | الطفل: ${childName}`;
                     document.getElementById('ticketResult').style.display = 'block';
                     form.reset();
                 } else {
-                    alert("حدث خطأ في الخادم.");
+                    alert("حدث خطأ أثناء الحفظ.");
                 }
             })
             .catch(err => {
@@ -287,7 +283,7 @@
 
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">جاري تحميل البيانات من جوجل...</td></tr>';
 
-            fetch(`${SCRIPT_URL}?className=${className}`)
+            fetch(`${SCRIPT_URL}?className=${encodeURIComponent(className)}`)
             .then(res => res.json())
             .then(data => {
                 tbody.innerHTML = '';
